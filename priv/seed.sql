@@ -1,0 +1,11 @@
+CREATE TABLE projects (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_status_id TINYINT UNSIGNED NOT_NULL
+);
+
+CREATE TABLE project_statuses (
+  id TINYINT UNSIGNED NOT NULL AUTO_INCREMENT
+  code VARCHAR(255),
+  name VARCHAR(255),
+  description VARCHAR(255)
+);
