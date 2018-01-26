@@ -24,8 +24,37 @@
 	<body>
 		<div class="reveal">
 			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+
+				<section><h2>Bad Names</h2></section>
+
+				<section data-markdown>
+					### Table names don't have to match schema names
+
+					```elixir
+					defmodule App.Account do
+						use Ecto.Schema
+
+						schema "users" do
+							# snip
+						end
+					end
+					```
+				</section>
+
+				<section data-markdown>
+					### Field names don't have to match column names
+
+					```elixir
+					defmodule App.Account do
+						use Ecto.Schema
+
+						schema "users" do
+							field :email, :string, source: :contact_address
+						end
+					end
+					```
+				</section>
+
 			</div>
 		</div>
 
