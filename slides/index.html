@@ -26,32 +26,34 @@
 			<div class="slides">
 
 				<!-- 1: Intro -->
+				<!-- TODO -->
 
 				<!-- 1.1: Winchester Mystery House -->
+				<!-- TODO -->
 
 				<!-- 2: Bad Names -->
 				<section><h2>Bad Names</h2></section>
 
 				<!-- 2.1: Table names != schema names -->
-				<section data-markdown>
-					### Table names don't have to match schema names
+				<section>
+					<h3>Table names don't have to match schema names</h3>
 
-					```elixir
-					defmodule App.Account do
-						use Ecto.Schema
+					<pre><code data-trim>
+						defmodule App.Account do
+							use Ecto.Schema
 
-						schema "users" do
-							# snip
+							schema "users" do
+								# snip
+							end
 						end
-					end
-					```
+					</code></pre>
 				</section>
 
 				<!-- 2.2: Column names != field names (`:source`) -->
-				<section data-markdown>
-					### Field names don't have to match column names
+				<section>
+					<h3>Field names don't have to match column names</h3>
 
-					```elixir
+					<pre><code data-trim>
 					defmodule App.Account do
 						use Ecto.Schema
 
@@ -59,38 +61,157 @@
 							field :email, :string, source: :contact_address
 						end
 					end
-					```
+					</code></pre>
 				</section>
 
 				<!-- 3. Bad Types -->
+				<section><h2>Bad Types</h2></section>
+
+				<section>
+					<h3>Ecto Custom Types</h3>
+
+					<section>
+						<pre><code data-trim>
+							defmodule Ecto.Type do
+								@callback type :: t
+								@callback cast(term) :: {:ok, term} | :error
+								@callback load(term) :: {:ok, term} | :error
+								@callback dump(term) :: {:ok, term} | :error
+							end
+						</code></pre>
+
+						<aside class="notes">Talk about what each of these 4 functions do</aside>
+					</section>
+				</section>
 
 				<!-- 3.1: Float => Decimal -->
+				<!-- TODO -->
 
 				<!-- 3.2: Unix Timestamps -->
+				<!-- TODO -->
 
 				<!-- 3.3: Comma Separated Lists -->
+				<!-- TODO -->
 
 				<!-- 3.4: JSON Strings -->
+				<!-- TODO -->
 
 				<!-- 3.4.1: TODO: read up on embedded schemas -->
+				<!-- TODO -->
 
 				<!-- 4: Bad Structure -->
+				<!-- TODO -->
 
 				<!-- 4.1: Tables that shoudn't exist -->
+				<!-- TODO -->
 
 				<!-- 4.1.1: It's okay to omit caches -->
+				<!-- TODO -->
 
 				<!-- 4.1.2: Join table to custom type - `order_statuses` -->
+				<section>
+					<h3>Eliminating unnecessary tables</h3>
+
+					<section>
+						<pre><code data-trim>
+							defmodule MyApp.CustomTypes.ProjectStatus do
+								@behaviour Ecto.Type
+
+								def type, do: :integer
+							end
+						</code></pre>
+
+						<aside class="notes">
+							Make a custom type to wrap the status table. Our database IDs are
+							integers, so that's our underlying data type.
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							@statuses [
+								{1, :bidding, "bidding"},
+								{2, :proposal, "proposal to client"},
+								{3, :in_progress, "in progress"},
+								{4, :completed "completed"},
+								{6, :canceled, "canceled"},
+							]
+						</code></pre>
+
+						<aside class="notes">
+							Dump the whole contents of the table into a literal...
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							@codes            Enum.map(@statuses, &elem(&1, 1))
+							@codes_as_strings Enum.into(@codes, &{to_string(&1), &1})
+							@codes_by_id      Enum.into(@statuses, %{}, fn {k, v, _} -> {k, v} end)
+							@ids_by_code      Enum.into(@statuses, %{}, fn {k, v, _} -> {v, k} end)
+							@names_by_code    Enum.into(@statuses, %{}, fn {_, k, v} -> {k, v} end)
+						</code></pre>
+
+						<aside class="notes">
+							...and precalculate any views into the table we might need.
+						</aside>
+					</section>
+							
+					<section>
+						<pre><code data-trim>
+							def cast(code) when is_atom(code),
+								do: Enum.fetch(@codes, code)
+							def cast(id) when is_integer(id),
+								do: Map.fetch(@codes_by_id, id)
+							def cast(code) when is_binary(code),
+								do: Map.fetch(@codes_as_strings, code)
+						</code></pre>
+
+						<aside class="notes">
+							Cast is the only complicated part. We want to return an error for any
+							status code that isn't in the table, but we should accept either atoms
+							or strings so that params don't need special handling. We also accept
+							integers, just in case.
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+						def dump(code), do: Map.fetch(@ids_by_code, code)
+
+						def load(id), do: Map.fetch(@codes_by_id, id)
+						</code></pre>
+
+						<aside class="notes">
+							Dumping to and reading from the DB is just a matter of grabbing the
+							equivalent value from the relevant map.
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+						def name(code) do Map.get(@names_by_code, code)
+						</code></pre>
+
+						<aside class="notes">
+							Finally we provide a getter to lookup the human readable name.
+						</aside>
+					</section>
+				</section>
 
 				<!-- 4.2: Tables that don't exist but should -->
+				<!-- TODO -->
 
 				<!-- 4.2.1: Structs not schemas -->
+				<!-- TODO -->
 
 				<!-- 4.2.2: `to_whatever/1` methods -->
+				<!-- TODO -->
 
 				<!-- 4.3: TODO: read up on `virtual: true` -->
 
 				<!-- 5: Conclusion (Putting it all together?) -->
+				<!-- TODO -->
 
 			</div>
 		</div>
