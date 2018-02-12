@@ -85,13 +85,130 @@
 				</section>
 
 				<!-- 3.1: Float => Decimal -->
-				<!-- TODO -->
+				<section>
+					<h3>Float => Decimal</h3>
+
+					<section>
+						<pre><code data-trim>
+							defmodule MyApp.CustomTypes.FakeDecimal do
+								@behavior Ecto.Type
+
+								def type, do: :float
+							end
+						</code></pre>
+
+						<aside class="notes">
+							Some types of data (money) should always be stored and operated on as
+							an integer or a decimal, to avoid float rounding issues. We can't
+							completely avoid the issue (rounding during storage), but we can
+							convert immediately to avoid any other potential errors.
+
+							Type is :float because that's the actual DB column type.
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							def dump(nil), do: {:ok, nil}
+							def dump(%Decimal{} = num), do: {:ok, Decimal.to_float(num)}
+							def dump(_num), do: :error
+
+							def load(nil), do: {:ok, nil}
+							def load(num) when is_float(num), do: {:ok, Decimal.new(num)}
+							def load(_num), do: :error
+						</code></pre>
+
+						<aside class="notes">
+							Elixir has a really nice Decimal implementation.
+
+							Dump and load write to and read from the DB, respectively.
+
+							We have to special case nil because it's not a valid number but it is a valid DB value.
+						</aside>
+					</section>
+				</section>
+
+					<section>
+						<pre><code data-trim>
+							def cast(num) do
+								try do
+									{:ok, Decimal.new(num)}
+								rescue
+									Decimal.Error -> :error
+								end
+							end
+						</code></pre>
+
+						<aside class="notes">
+							Cast is usually the only complex function. It has to take a wide
+							variety of types. The more the better, but strings are usually
+							required for parameter parsing.
+
+							Luckily Decimal.new/1 already accepts basically anything reasonable.
+							All we have to do is wrap it in a try/rescue block so we can wrap the
+							return value appropriately.
+						</aside>
+					</section>
+				</section>
 
 				<!-- 3.2: Unix Timestamps -->
-				<!-- TODO -->
+				<section>
+					<h3>Unix Timestamps</h3>
+
+					<section>
+						<pre><code data-trim>
+							defmodule MyApp.CustomTypes.UnixTimestamp do
+								@behaviour Ecto.Type
+
+								def type, do: :integer
+							end
+						</code></pre>
+
+						<aside class="notes">
+							Consider Unix timestamps. The DB column is an :integer, but we want a DateTime.t
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							def dump(%DateTime{} = datetime),
+								do: {:ok, DateTime.to_unix(datetime)}
+							def dump(_), do: :error
+
+							def load(timestamp) when is_integer(timestamp),
+								do: DateTime.from_unix(timestamp)
+							def load(_), do: :error
+						</code></pre>
+
+						<aside class="notes">
+							Dump and load are as simple as using the DateTime builtins.
+
+							The type checks are probably unnecessary in normal usage.
+						</aside>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							def cast(dt) when is_binary(dt) do
+								case DateTime.from_iso8601(dt) do
+									{:ok, dt, _} -> {:ok, dt}
+									{:error, _} -> :error
+								end
+							end
+							def cast(%DateTime{} = dt), do: {:ok, dt}
+							def cast(_), do: :error
+						</code></pre>
+
+						<aside class="notes">
+							Casting is a bit more manual this time. We accept String.t and DateTime.t only.
+
+							Note that it does _not_ accept integers.
+						</aside>
+					</section>
+				</section>
 
 				<!-- 3.3: Comma Separated Lists -->
-				<!-- TODO -->
+				<!-- TODO? -->
 
 				<!-- 3.4: JSON Strings -->
 				<!-- TODO -->
@@ -203,10 +320,81 @@
 				<!-- TODO -->
 
 				<!-- 4.2.1: Structs not schemas -->
-				<!-- TODO -->
+				<section>
+					<h3>Problem: Structural Duplication</h3>
 
-				<!-- 4.2.2: `to_whatever/1` methods -->
-				<!-- TODO -->
+					<section>
+						<pre><code data-trim>
+							defmodule MyApp.Orders.Item do
+								use Ecto.Schema
+
+								schema "order_items" do
+									# ...snip
+									field :shipping_depth, :integer # inches
+									field :shipping_width, :integer # inches
+									field :shipping_height, :integer # inches
+									field :shipping_weight, :float # pounds
+								end
+							end
+						</code></pre>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							defmodule MyApp.Support.Repair do
+								use Ecto.Schema
+
+								schema "support_repairs" do
+									# ...snip
+									field :shipping_depth, :integer # inches
+									field :shipping_width, :integer # inches
+									field :shipping_height, :integer # inches
+									field :shipping_weight, :float # pounds
+								end
+							end
+						</code></pre>
+					</section>
+				</section>
+
+				<section>
+					<h3>Solution: Structs</h3>
+
+					<section>
+						<pre><code data-trim>
+							defmodule MyApp.Shipping.Parcel do
+								defstruct :depth, :width, :height, :weight, :__original__
+							end
+						</code></pre>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							def to_parcel(%Item{} = item) do
+								%Parcel{
+									depth: item.shipping_depth,
+									width: item.shipping_width,
+									height: item.shipping_height,
+									weight: item.shipping_weight,
+									__original__: item,
+								}
+							end
+						</code></pre>
+					</section>
+
+					<section>
+						<pre><code data-trim>
+							def from_parcel(%Parcel{} = parcel) do
+								parcel.__original__
+								|> Changeset.change(%{
+									shipping_depth: parcel.depth,
+									shipping_width: parcel.width,
+									shipping_height: parcel.height,
+									shipping_weight: parcel.weight,
+								})
+							end
+						</code></pre>
+					</section>
+				</section>
 
 				<!-- 4.3: TODO: read up on `virtual: true` -->
 
