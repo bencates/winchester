@@ -1,424 +1,449 @@
 <!doctype html>
 <html>
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-		<title>reveal.js</title>
-
-		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
-
-		<!-- Theme used for syntax highlighting of code -->
-		<link rel="stylesheet" href="lib/css/zenburn.css">
-
-		<!-- Printing and PDF exports -->
-		<script>
-			var link = document.createElement( 'link' );
-			link.rel = 'stylesheet';
-			link.type = 'text/css';
-			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
-			document.getElementsByTagName( 'head' )[0].appendChild( link );
-		</script>
-	</head>
-	<body>
-		<div class="reveal">
-			<div class="slides">
-
-				<!-- 1: Intro -->
-				<!-- TODO -->
-
-				<!-- 1.1: Winchester Mystery House -->
-				<!-- TODO -->
-
-				<!-- 2: Bad Names -->
-				<section><h2>Bad Names</h2></section>
-
-				<!-- 2.1: Table names != schema names -->
-				<section>
-					<h3>Table names don't have to match schema names</h3>
-
-					<pre><code data-trim>
-						defmodule App.Account do
-							use Ecto.Schema
-
-							schema "users" do
-								# snip
-							end
-						end
-					</code></pre>
-				</section>
-
-				<!-- 2.2: Column names != field names (`:source`) -->
-				<section>
-					<h3>Field names don't have to match column names</h3>
-
-					<pre><code data-trim>
-					defmodule App.Account do
-						use Ecto.Schema
-
-						schema "users" do
-							field :email, :string, source: :contact_address
-						end
-					end
-					</code></pre>
-				</section>
-
-				<!-- 3. Bad Types -->
-				<section><h2>Bad Types</h2></section>
-
-				<section>
-					<h3>Ecto Custom Types</h3>
-
-					<section>
-						<pre><code data-trim>
-							defmodule Ecto.Type do
-								@callback type :: t
-								@callback cast(term) :: {:ok, term} | :error
-								@callback load(term) :: {:ok, term} | :error
-								@callback dump(term) :: {:ok, term} | :error
-							end
-						</code></pre>
-
-						<aside class="notes">Talk about what each of these 4 functions do</aside>
-					</section>
-				</section>
-
-				<!-- 3.1: Float => Decimal -->
-				<section>
-					<h3>Float => Decimal</h3>
-
-					<section>
-						<pre><code data-trim>
-							defmodule MyApp.CustomTypes.FakeDecimal do
-								@behavior Ecto.Type
-
-								def type, do: :float
-							end
-						</code></pre>
-
-						<aside class="notes">
-							Some types of data (money) should always be stored and operated on as
-							an integer or a decimal, to avoid float rounding issues. We can't
-							completely avoid the issue (rounding during storage), but we can
-							convert immediately to avoid any other potential errors.
-
-							Type is :float because that's the actual DB column type.
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							def dump(nil), do: {:ok, nil}
-							def dump(%Decimal{} = num), do: {:ok, Decimal.to_float(num)}
-							def dump(_num), do: :error
-
-							def load(nil), do: {:ok, nil}
-							def load(num) when is_float(num), do: {:ok, Decimal.new(num)}
-							def load(_num), do: :error
-						</code></pre>
-
-						<aside class="notes">
-							Elixir has a really nice Decimal implementation.
-
-							Dump and load write to and read from the DB, respectively.
-
-							We have to special case nil because it's not a valid number but it is a valid DB value.
-						</aside>
-					</section>
-				</section>
-
-					<section>
-						<pre><code data-trim>
-							def cast(num) do
-								try do
-									{:ok, Decimal.new(num)}
-								rescue
-									Decimal.Error -> :error
-								end
-							end
-						</code></pre>
-
-						<aside class="notes">
-							Cast is usually the only complex function. It has to take a wide
-							variety of types. The more the better, but strings are usually
-							required for parameter parsing.
-
-							Luckily Decimal.new/1 already accepts basically anything reasonable.
-							All we have to do is wrap it in a try/rescue block so we can wrap the
-							return value appropriately.
-						</aside>
-					</section>
-				</section>
-
-				<!-- 3.2: Unix Timestamps -->
-				<section>
-					<h3>Unix Timestamps</h3>
-
-					<section>
-						<pre><code data-trim>
-							defmodule MyApp.CustomTypes.UnixTimestamp do
-								@behaviour Ecto.Type
-
-								def type, do: :integer
-							end
-						</code></pre>
-
-						<aside class="notes">
-							Consider Unix timestamps. The DB column is an :integer, but we want a DateTime.t
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							def dump(%DateTime{} = datetime),
-								do: {:ok, DateTime.to_unix(datetime)}
-							def dump(_), do: :error
-
-							def load(timestamp) when is_integer(timestamp),
-								do: DateTime.from_unix(timestamp)
-							def load(_), do: :error
-						</code></pre>
-
-						<aside class="notes">
-							Dump and load are as simple as using the DateTime builtins.
-
-							The type checks are probably unnecessary in normal usage.
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							def cast(dt) when is_binary(dt) do
-								case DateTime.from_iso8601(dt) do
-									{:ok, dt, _} -> {:ok, dt}
-									{:error, _} -> :error
-								end
-							end
-							def cast(%DateTime{} = dt), do: {:ok, dt}
-							def cast(_), do: :error
-						</code></pre>
-
-						<aside class="notes">
-							Casting is a bit more manual this time. We accept String.t and DateTime.t only.
-
-							Note that it does _not_ accept integers.
-						</aside>
-					</section>
-				</section>
-
-				<!-- 3.3: Comma Separated Lists -->
-				<!-- TODO? -->
-
-				<!-- 3.4: JSON Strings -->
-				<!-- TODO -->
-
-				<!-- 3.4.1: TODO: read up on embedded schemas -->
-				<!-- TODO -->
-
-				<!-- 4: Bad Structure -->
-				<!-- TODO -->
-
-				<!-- 4.1: Tables that shoudn't exist -->
-				<!-- TODO -->
-
-				<!-- 4.1.1: It's okay to omit caches -->
-				<!-- TODO -->
-
-				<!-- 4.1.2: Join table to custom type - `order_statuses` -->
-				<section>
-					<h3>Eliminating unnecessary tables</h3>
-
-					<section>
-						<pre><code data-trim>
-							defmodule MyApp.CustomTypes.ProjectStatus do
-								@behaviour Ecto.Type
-
-								def type, do: :integer
-							end
-						</code></pre>
-
-						<aside class="notes">
-							Make a custom type to wrap the status table. Our database IDs are
-							integers, so that's our underlying data type.
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							@statuses [
-								{1, :bidding, "bidding"},
-								{2, :proposal, "proposal to client"},
-								{3, :in_progress, "in progress"},
-								{4, :completed "completed"},
-								{6, :canceled, "canceled"},
-							]
-						</code></pre>
-
-						<aside class="notes">
-							Dump the whole contents of the table into a literal...
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							@codes            Enum.map(@statuses, &elem(&1, 1))
-							@codes_as_strings Enum.into(@codes, &{to_string(&1), &1})
-							@codes_by_id      Enum.into(@statuses, %{}, fn {k, v, _} -> {k, v} end)
-							@ids_by_code      Enum.into(@statuses, %{}, fn {k, v, _} -> {v, k} end)
-							@names_by_code    Enum.into(@statuses, %{}, fn {_, k, v} -> {k, v} end)
-						</code></pre>
-
-						<aside class="notes">
-							...and precalculate any views into the table we might need.
-						</aside>
-					</section>
-							
-					<section>
-						<pre><code data-trim>
-							def cast(code) when is_atom(code),
-								do: Enum.fetch(@codes, code)
-							def cast(id) when is_integer(id),
-								do: Map.fetch(@codes_by_id, id)
-							def cast(code) when is_binary(code),
-								do: Map.fetch(@codes_as_strings, code)
-						</code></pre>
-
-						<aside class="notes">
-							Cast is the only complicated part. We want to return an error for any
-							status code that isn't in the table, but we should accept either atoms
-							or strings so that params don't need special handling. We also accept
-							integers, just in case.
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-						def dump(code), do: Map.fetch(@ids_by_code, code)
-
-						def load(id), do: Map.fetch(@codes_by_id, id)
-						</code></pre>
-
-						<aside class="notes">
-							Dumping to and reading from the DB is just a matter of grabbing the
-							equivalent value from the relevant map.
-						</aside>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-						def name(code) do Map.get(@names_by_code, code)
-						</code></pre>
-
-						<aside class="notes">
-							Finally we provide a getter to lookup the human readable name.
-						</aside>
-					</section>
-				</section>
-
-				<!-- 4.2: Tables that don't exist but should -->
-				<!-- TODO -->
-
-				<!-- 4.2.1: Structs not schemas -->
-				<section>
-					<h3>Problem: Structural Duplication</h3>
-
-					<section>
-						<pre><code data-trim>
-							defmodule MyApp.Orders.Item do
-								use Ecto.Schema
-
-								schema "order_items" do
-									# ...snip
-									field :shipping_depth, :integer # inches
-									field :shipping_width, :integer # inches
-									field :shipping_height, :integer # inches
-									field :shipping_weight, :float # pounds
-								end
-							end
-						</code></pre>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							defmodule MyApp.Support.Repair do
-								use Ecto.Schema
-
-								schema "support_repairs" do
-									# ...snip
-									field :shipping_depth, :integer # inches
-									field :shipping_width, :integer # inches
-									field :shipping_height, :integer # inches
-									field :shipping_weight, :float # pounds
-								end
-							end
-						</code></pre>
-					</section>
-				</section>
-
-				<section>
-					<h3>Solution: Structs</h3>
-
-					<section>
-						<pre><code data-trim>
-							defmodule MyApp.Shipping.Parcel do
-								defstruct :depth, :width, :height, :weight, :__original__
-							end
-						</code></pre>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							def to_parcel(%Item{} = item) do
-								%Parcel{
-									depth: item.shipping_depth,
-									width: item.shipping_width,
-									height: item.shipping_height,
-									weight: item.shipping_weight,
-									__original__: item,
-								}
-							end
-						</code></pre>
-					</section>
-
-					<section>
-						<pre><code data-trim>
-							def from_parcel(%Parcel{} = parcel) do
-								parcel.__original__
-								|> Changeset.change(%{
-									shipping_depth: parcel.depth,
-									shipping_width: parcel.width,
-									shipping_height: parcel.height,
-									shipping_weight: parcel.weight,
-								})
-							end
-						</code></pre>
-					</section>
-				</section>
-
-				<!-- 4.3: TODO: read up on `virtual: true` -->
-
-				<!-- 5: Conclusion (Putting it all together?) -->
-				<!-- TODO -->
-
-			</div>
-		</div>
-
-		<script src="lib/js/head.min.js"></script>
-		<script src="js/reveal.js"></script>
-
-		<script>
-			// More info about config & dependencies:
-			// - https://github.com/hakimel/reveal.js#configuration
-			// - https://github.com/hakimel/reveal.js#dependencies
-			Reveal.initialize({
-				dependencies: [
-					{ src: 'plugin/markdown/marked.js' },
-					{ src: 'plugin/markdown/markdown.js' },
-					{ src: 'plugin/notes/notes.js', async: true },
-					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
-				]
-			});
-		</script>
-	</body>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+      var link = document.createElement( 'link' );
+      link.rel = 'stylesheet';
+      link.type = 'text/css';
+      link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+      document.getElementsByTagName( 'head' )[0].appendChild( link );
+    </script>
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+
+        <!-- 1: Intro -->
+        <section>
+          <h1>Building on Sand</h1>
+          <h2>Firm Foundations from Legacy Databases</h2>
+        </section>
+
+        <!-- 1.1: Winchester Mystery House -->
+        <!-- TODO -->
+        <section><h2>FIXME: intro</h2></section>
+
+        <!-- 2: Bad Names -->
+        <section><h2>Bad Names</h2></section>
+
+        <!-- 2.1: Table names != schema names -->
+        <section>
+          <h3>Table names don't have to match schema names</h3>
+
+          <pre><code data-trim>
+            defmodule App.Account do
+              use Ecto.Schema
+
+              schema "users" do
+                # snip
+              end
+            end
+          </code></pre>
+        </section>
+
+        <!-- 2.2: Column names != field names (`:source`) -->
+        <section>
+          <h3>Field names don't have to match column names</h3>
+
+          <pre><code data-trim>
+          defmodule App.Account do
+            use Ecto.Schema
+
+            schema "users" do
+              field :email, :string, source: :contact_address
+            end
+          end
+          </code></pre>
+        </section>
+
+        <!-- 3. Bad Types -->
+        <section><h2>Bad Types</h2></section>
+
+        <section>
+          <h3>Ecto Custom Types</h3>
+
+          <section>
+            <pre><code data-trim>
+              defmodule Ecto.Type do
+                @callback type :: t
+                @callback cast(term) :: {:ok, term} | :error
+                @callback load(term) :: {:ok, term} | :error
+                @callback dump(term) :: {:ok, term} | :error
+              end
+            </code></pre>
+
+            <aside class="notes">Talk about what each of these 4 functions do</aside>
+          </section>
+        </section>
+
+        <!-- 3.1: Float => Decimal -->
+        <section>
+          <h3>Float => Decimal</h3>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.CustomTypes.FakeDecimal do
+                @behavior Ecto.Type
+
+                def type, do: :float
+              end
+            </code></pre>
+
+            <aside class="notes">
+              Some types of data (money) should always be stored and operated on as
+              an integer or a decimal, to avoid float rounding issues. We can't
+              completely avoid the issue (rounding during storage), but we can
+              convert immediately to avoid any other potential errors.
+
+              Type is :float because that's the actual DB column type.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def dump(nil), do: {:ok, nil}
+              def dump(%Decimal{} = num), do: {:ok, Decimal.to_float(num)}
+              def dump(_num), do: :error
+
+              def load(nil), do: {:ok, nil}
+              def load(num) when is_float(num), do: {:ok, Decimal.new(num)}
+              def load(_num), do: :error
+            </code></pre>
+
+            <aside class="notes">
+              Elixir has a really nice Decimal implementation.
+
+              Dump and load write to and read from the DB, respectively.
+
+              We have to special case nil because it's not a valid number but it is a valid DB value.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def cast(num) do
+                try do
+                  {:ok, Decimal.new(num)}
+                rescue
+                  Decimal.Error -> :error
+                end
+              end
+            </code></pre>
+
+            <aside class="notes">
+              Cast is usually the only complex function. It has to take a wide
+              variety of types. The more the better, but strings are usually
+              required for parameter parsing.
+
+              Luckily Decimal.new/1 already accepts basically anything reasonable.
+              All we have to do is wrap it in a try/rescue block so we can wrap the
+              return value appropriately.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.Product do
+                use Ecto.Schema
+
+                schema "products" do
+                  field :name, :string
+                  field :price, MyApp.CustomTypes.FakeDecimal
+                end
+              end
+            </code></pre>
+
+            <aside class="notes">
+              Using a custom type is just a matter of setting it as the field
+              type.
+            </aside>
+          </section>
+        </section>
+
+        <!-- 3.2: Unix Timestamps -->
+        <section>
+          <h3>Unix Timestamps</h3>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.CustomTypes.UnixTimestamp do
+                @behaviour Ecto.Type
+
+                def type, do: :integer
+              end
+            </code></pre>
+
+            <aside class="notes">
+              Consider Unix timestamps. The DB column is an :integer, but we want a DateTime.t
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def dump(%DateTime{} = datetime),
+                do: {:ok, DateTime.to_unix(datetime)}
+              def dump(_), do: :error
+
+              def load(timestamp) when is_integer(timestamp),
+                do: DateTime.from_unix(timestamp)
+              def load(_), do: :error
+            </code></pre>
+
+            <aside class="notes">
+              Dump and load are as simple as using the DateTime builtins.
+
+              The type checks are probably unnecessary in normal usage.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def cast(dt) when is_binary(dt) do
+                case DateTime.from_iso8601(dt) do
+                  {:ok, dt, _} -> {:ok, dt}
+                  {:error, _} -> :error
+                end
+              end
+              def cast(%DateTime{} = dt), do: {:ok, dt}
+              def cast(_), do: :error
+            </code></pre>
+
+            <aside class="notes">
+              Casting is a bit more manual this time. We accept String.t and DateTime.t only.
+
+              Note that it does _not_ accept integers.
+            </aside>
+          </section>
+        </section>
+
+        <!-- 3.3: Comma Separated Lists -->
+        <!-- TODO? -->
+
+        <!-- 3.4: JSON Strings -->
+        <!-- TODO? -->
+
+        <!-- 4: Bad Structure -->
+        <section><h2>Bad Structure</h2></section>
+
+        <!-- 4.1: Data that shoudn't exist -->
+        <!-- TODO -->
+
+        <!-- 4.1.1: It's okay to omit caches -->
+        <section>
+          <h3>Eliminating unnecessary columns</h3>
+
+          <section>
+            <p>TODO: graphic here</p>
+          </section>
+        </section>
+
+        <!-- 4.1.2: Join table to custom type - `order_statuses` -->
+        <section>
+          <h3>Eliminating unnecessary tables</h3>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.CustomTypes.ProjectStatus do
+                @behaviour Ecto.Type
+
+                def type, do: :integer
+              end
+            </code></pre>
+
+            <aside class="notes">
+              Make a custom type to wrap the status table. Our database IDs are
+              integers, so that's our underlying data type.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              @statuses [
+                {1, :bidding, "bidding"},
+                {2, :proposal, "proposal to client"},
+                {3, :in_progress, "in progress"},
+                {4, :completed "completed"},
+                {6, :canceled, "canceled"},
+              ]
+            </code></pre>
+
+            <aside class="notes">
+              Dump the whole contents of the table into a literal...
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              @codes            Enum.map(@statuses, &elem(&1, 1))
+              @codes_as_strings Enum.into(@codes, &{to_string(&1), &1})
+              @codes_by_id      Enum.into(@statuses, %{}, fn {k, v, _} -> {k, v} end)
+              @ids_by_code      Enum.into(@statuses, %{}, fn {k, v, _} -> {v, k} end)
+              @names_by_code    Enum.into(@statuses, %{}, fn {_, k, v} -> {k, v} end)
+            </code></pre>
+
+            <aside class="notes">
+              ...and precalculate any views into the table we might need.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def cast(code) when is_atom(code),
+                do: Enum.fetch(@codes, code)
+              def cast(id) when is_integer(id),
+                do: Map.fetch(@codes_by_id, id)
+              def cast(code) when is_binary(code),
+                do: Map.fetch(@codes_as_strings, code)
+            </code></pre>
+
+            <aside class="notes">
+              Cast is the only complicated part. We want to return an error for any
+              status code that isn't in the table, but we should accept either atoms
+              or strings so that params don't need special handling. We also accept
+              integers, just in case.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+            def dump(code), do: Map.fetch(@ids_by_code, code)
+
+            def load(id), do: Map.fetch(@codes_by_id, id)
+            </code></pre>
+
+            <aside class="notes">
+              Dumping to and reading from the DB is just a matter of grabbing the
+              equivalent value from the relevant map.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+            def name(code) do Map.get(@names_by_code, code)
+            </code></pre>
+
+            <aside class="notes">
+              Finally we provide a getter to lookup the human readable name.
+            </aside>
+          </section>
+        </section>
+
+        <!-- 4.2: Tables that don't exist but should -->
+        <!-- TODO -->
+
+        <!-- 4.2.1: Structs not schemas -->
+        <section>
+          <h3>Problem: Structural Duplication</h3>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.Orders.Item do
+                use Ecto.Schema
+
+                schema "order_items" do
+                  # ...snip
+                  field :shipping_depth, :integer # inches
+                  field :shipping_width, :integer # inches
+                  field :shipping_height, :integer # inches
+                  field :shipping_weight, :float # pounds
+                end
+              end
+            </code></pre>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.Support.Repair do
+                use Ecto.Schema
+
+                schema "support_repairs" do
+                  # ...snip
+                  field :shipping_depth, :integer # inches
+                  field :shipping_width, :integer # inches
+                  field :shipping_height, :integer # inches
+                  field :shipping_weight, :float # pounds
+                end
+              end
+            </code></pre>
+          </section>
+        </section>
+
+        <section>
+          <h3>Solution: Structs instead of schemas</h3>
+
+          <section>
+            <pre><code data-trim>
+              defmodule MyApp.Shipping.Parcel do
+                defstruct :depth, :width, :height, :weight, :__original__
+              end
+            </code></pre>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def to_parcel(%Item{} = item) do
+                %Parcel{
+                  depth: item.shipping_depth,
+                  width: item.shipping_width,
+                  height: item.shipping_height,
+                  weight: item.shipping_weight,
+                  __original__: item,
+                }
+              end
+            </code></pre>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              def from_parcel(%Parcel{} = parcel) do
+                parcel.__original__
+                |> Changeset.change(%{
+                  shipping_depth: parcel.depth,
+                  shipping_width: parcel.width,
+                  shipping_height: parcel.height,
+                  shipping_weight: parcel.weight,
+                })
+              end
+            </code></pre>
+          </section>
+        </section>
+
+        <!-- 4.3: TODO: read up on `virtual: true` -->
+
+        <!-- 5: Conclusion (Putting it all together?) -->
+        <!-- TODO -->
+        <section><h2>FIXME: conclusion</h2></section>
+
+      </div>
+    </div>
+
+    <script src="lib/js/head.min.js"></script>
+    <script src="js/reveal.js"></script>
+
+    <script>
+      // More info about config & dependencies:
+      // - https://github.com/hakimel/reveal.js#configuration
+      // - https://github.com/hakimel/reveal.js#dependencies
+      Reveal.initialize({
+        dependencies: [
+          { src: 'plugin/markdown/marked.js' },
+          { src: 'plugin/markdown/markdown.js' },
+          { src: 'plugin/notes/notes.js', async: true },
+          { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+        ]
+      });
+    </script>
+  </body>
 </html>
