@@ -33,10 +33,13 @@
 
         <!-- 1.1: Winchester Mystery House -->
         <!-- TODO -->
-        <section><h2>FIXME: intro</h2></section>
+        <section>
+          <img src="images/system76_logo_white.svg" />
+          <h2>FIXME: intro</h2>
+        </section>
 
         <!-- 2: Bad Names -->
-        <section><h2>Bad Names</h2></section>
+        <section><h2>1. Bad Names</h2></section>
 
         <!-- 2.1: Table names != schema names -->
         <section>
@@ -66,10 +69,14 @@
             end
           end
           </code></pre>
+
+            <aside class="notes">
+              `:source` was added in Ecto 2.2 (Aug 2017).
+            </aside>
         </section>
 
         <!-- 3. Bad Types -->
-        <section><h2>Bad Types</h2></section>
+        <section><h2>2. Bad Types</h2></section>
 
         <section>
           <h3>Ecto Custom Types</h3>
@@ -84,13 +91,29 @@
               end
             </code></pre>
 
-            <aside class="notes">Talk about what each of these 4 functions do</aside>
+            <aside class="notes">
+              Talk about what each of these 4 functions do
+            </aside>
           </section>
         </section>
 
         <!-- 3.1: Float => Decimal -->
         <section>
           <h3>Float => Decimal</h3>
+
+          <section></section>
+
+          <section>
+            <pre><code data-trim>
+              iex(1)> 0.1 + 0.2
+              0.30000000000000004
+            </code></pre>
+
+            <aside class="notes">
+              Some types of data (money) should always be stored and operated on
+              as an integer or a decimal, to avoid float rounding issues.
+            </aside>
+          </section>
 
           <section>
             <pre><code data-trim>
@@ -102,10 +125,8 @@
             </code></pre>
 
             <aside class="notes">
-              Some types of data (money) should always be stored and operated on as
-              an integer or a decimal, to avoid float rounding issues. We can't
-              completely avoid the issue (rounding during storage), but we can
-              convert immediately to avoid any other potential errors.
+              We can't completely avoid the issue (rounding during storage), but
+              we can convert immediately to avoid any other potential errors.
 
               Type is :float because that's the actual DB column type.
             </aside>
@@ -176,6 +197,21 @@
         <section>
           <h3>Unix Timestamps</h3>
 
+          <section></section>
+
+          <section>
+            <pre><code data-trim>
+              old_and_busted = 1519503600
+
+              new_hotness = "2018-02-24T14:20:00-06:00"
+            </code></pre>
+
+            <aside class="notes">
+              Consider Unix timestamps. They're great as a storage format, but
+              can be a pain to work with.
+            </aside>
+          </section>
+
           <section>
             <pre><code data-trim>
               defmodule MyApp.CustomTypes.UnixTimestamp do
@@ -186,7 +222,7 @@
             </code></pre>
 
             <aside class="notes">
-              Consider Unix timestamps. The DB column is an :integer, but we want a DateTime.t
+              The DB column is an :integer, but we want a DateTime.t
             </aside>
           </section>
 
@@ -235,7 +271,7 @@
         <!-- TODO? -->
 
         <!-- 4: Bad Structure -->
-        <section><h2>Bad Structure</h2></section>
+        <section><h2>3. Bad Structure</h2></section>
 
         <!-- 4.1: Data that shoudn't exist -->
         <!-- TODO -->
@@ -255,7 +291,7 @@
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.CustomTypes.ProjectStatus do
+              defmodule MyApp.CustomTypes.OrderStatus do
                 @behaviour Ecto.Type
 
                 def type, do: :integer
@@ -271,9 +307,9 @@
           <section>
             <pre><code data-trim>
               @statuses [
-                {1, :bidding, "bidding"},
-                {2, :proposal, "proposal to client"},
-                {3, :in_progress, "in progress"},
+                {1, :awaiting_payment, "awaiting payment"},
+                {2, :assembly, "currently being assembled"},
+                {3, :shipping, "in transit"},
                 {4, :completed "completed"},
                 {6, :canceled, "canceled"},
               ]
