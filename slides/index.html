@@ -43,7 +43,23 @@
           </aside>
         </section>
 
-        <!-- TODO: Joshua and Hal -->
+        <section>
+          <section>
+            <img src="images/joshua.jpg" />
+
+            <aside class="notes">
+              Introduce Joshua
+            </aside>
+          </section>
+
+          <section>
+            <img src="images/hal.jpg" />
+
+            <aside class="notes">
+              Introduce Hal
+            </aside>
+          </section>
+        </section>
 
         <section>
           <h2><ol>
@@ -72,6 +88,10 @@
                 end
               end
             </code></pre>
+
+            <aside class="notes">
+              For me this was so easy it was difficult.
+            </aside>
           </section>
 
           <section>
@@ -84,12 +104,12 @@
                 end
               end
             </code></pre>
-          </section>
 
-          <aside class="notes">
-            For me this was so easy it was difficult. Talk about good schema
-            names. Namespacing is different in SQL and Elixir.
-          </aside>
+            <aside class="notes">
+              Talk about good schema names. Namespacing is different in SQL and
+              Elixir.
+            </aside>
+          </section>
         </section>
 
         <section>
@@ -154,7 +174,6 @@
           </section>
         </section>
 
-        <!-- 3.1: Float => Decimal -->
         <section>
           <h3>Float => Decimal</h3>
 
@@ -259,19 +278,24 @@
           <h3>Unix Timestamps</h3>
 
           <section>
+            <h4 id="unix_timestamp">1519503600</h4>
+
             <aside class="notes">
-              We store dates and times as Unix timestamps. They're great as a
-              storage format, but can be a pain to work with.
+              Can anyone tell me when this is?
             </aside>
           </section>
 
           <section>
-            <!-- TODO: live timestamp examples. Nice to have, do last. -->
-            <pre><code data-trim>
-              old_and_busted = 1519503600
+            <h4 id="iso_timestamp">2018-02-24T14:20:00-06:00</h4>
 
-              new_hotness = "2018-02-24T14:20:00-06:00"
-            </code></pre>
+            <aside class="notes">
+              How about now?
+
+              This is an ISO 8601 timestamp.
+
+              We store dates and times as Unix timestamps. They're great as a
+              storage format, but can be a pain to work with.
+            </aside>
           </section>
 
           <section>
@@ -332,7 +356,6 @@
           <h3>Eliminating unnecessary columns</h3>
 
           <section>
-            <!-- TODO: make sure this is safe to show -->
             <pre><code data-trim>
             CREATE TABLE `users` (
               `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -534,7 +557,9 @@
             </code></pre>
           </section>
 
-          <!-- TODO: add a slide showing how to use this -->
+          <aside class="notes">
+            Talk about multiple tables with the same sets of fields
+          </aside>
         </section>
 
         <section>
@@ -576,18 +601,34 @@
             </code></pre>
           </section>
 
-          <!-- TODO: add a slide showing how to use this -->
+          <section>
+            <pre><code data-trim>
+              parcel = Repair |> Repo.get!(123) |> Repair.to_parcel
+
+              repair = parcel |> Repair.from_parcel |> Repo.update!
+            </code></pre>
+
+            <aside class="notes">
+              Reading and writing requires one call to `to_parcel/1` or
+              `from_parcel/1`. Other than that it can be used exactly like any
+              other struct.
+            </aside>
+          </section>
         </section>
 
-        <!-- TODO -->
-        <!-- End slide with where to go next (github.com/system76, @system76 etc.) -->
-        <section><h2>FIXME: conclusion</h2></section>
+        <section>
+          <h2>Any Questions?</h2>
+
+          <p><a href="https://system76.com">https://system76.com</a></p>
+          <p><a href="https://github.com/system76">https://github.com/system76</a></p>
+        </section>
 
       </div>
     </div>
 
     <script src="lib/js/head.min.js"></script>
     <script src="js/reveal.js"></script>
+    <script src="lib/js/moment.js"></script>
 
     <script>
       // More info about config & dependencies:
@@ -601,6 +642,14 @@
           { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
         ]
       });
+
+      var unixTimestamp = document.getElementById('unix_timestamp');
+      var isoTimestamp = document.getElementById('iso_timestamp');
+
+      setInterval(function () {
+        unixTimestamp.innerText = moment().unix();
+        isoTimestamp.innerText = moment().format();
+      }, 200);
     </script>
   </body>
 </html>
