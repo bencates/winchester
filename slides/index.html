@@ -25,57 +25,114 @@
     <div class="reveal">
       <div class="slides">
 
-        <!-- 1: Intro -->
         <section>
           <h1>Building on Sand</h1>
           <h2>Firm Foundations from Legacy Databases</h2>
+
+          <aside class="notes">
+            Introduce the talk topic. Talk about Joshua and Hal.
+          </aside>
         </section>
 
-        <!-- 1.1: Winchester Mystery House -->
-        <!-- TODO -->
         <section>
           <img src="images/system76_logo_white.svg" />
-          <h2>FIXME: intro</h2>
+          <p>Ben Cates &lt;ben@system76.com&gt;</p>
+
+          <aside class="notes">
+            Introduce the company and yourself.
+          </aside>
         </section>
 
-        <!-- 2: Bad Names -->
+        <!-- TODO: Joshua and Hal -->
+
+        <section>
+          <h2><ol>
+            <li>Bad Names</li>
+            <li>Bad Types</li>
+            <li>Bad Structure</li>
+          </ol></h2>
+
+          <aside class="notes">
+            Tell them what you're gonna tell them.
+          </aside>
+        </section>
+
         <section><h2>1. Bad Names</h2></section>
 
-        <!-- 2.1: Table names != schema names -->
         <section>
           <h3>Table names don't have to match schema names</h3>
 
-          <pre><code data-trim>
-            defmodule App.Account do
-              use Ecto.Schema
+          <section>
+            <pre><code data-trim>
+              defmodule Hal.User do
+                use Ecto.Schema
 
-              schema "users" do
-                # snip
+                schema "users" do
+                  # snip
+                end
               end
-            end
-          </code></pre>
+            </code></pre>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              defmodule Hal.Accounts.Customer do
+                use Ecto.Schema
+
+                schema "users" do
+                  # snip
+                end
+              end
+            </code></pre>
+          </section>
+
+          <aside class="notes">
+            For me this was so easy it was difficult. Talk about good schema
+            names. Namespacing is different in SQL and Elixir.
+          </aside>
         </section>
 
-        <!-- 2.2: Column names != field names (`:source`) -->
         <section>
           <h3>Field names don't have to match column names</h3>
 
-          <pre><code data-trim>
-          defmodule App.Account do
-            use Ecto.Schema
+          <section>
+            <pre><code data-trim>
+            defmodule Hal.Fulfillment.Product do
+              use Ecto.Schema
 
-            schema "users" do
-              field :email, :string, source: :contact_address
+              schema "order_products" do
+                field :amount,      :decimal
+                field :price,       :decimal
+                field :cost_amount, :decimal
+                field :cost,        :decimal
+                # snip
+              end
             end
-          end
-          </code></pre>
+            </code></pre>
+          </section>
 
-            <aside class="notes">
-              `:source` was added in Ecto 2.2 (Aug 2017).
-            </aside>
+          <section>
+            <pre><code data-trim>
+            defmodule Hal.Fulfillment.Product do
+              use Ecto.Schema
+
+              schema "order_products" do
+                field :base_price,             :decimal, source: :amount
+                field :price_as_configured,    :decimal, source: :price
+                field :our_base_cost,          :decimal, source: :cost_amount
+                field :our_cost_as_configured, :decimal, source: :cost
+                # snip
+              end
+            end
+            </code></pre>
+          </section>
+
+          <aside class="notes">
+            Talk about good names. "Can anyone tell me what these do? How
+            about now?" `:source` was added in Ecto 2.2 (Aug 2017).
+          </aside>
         </section>
 
-        <!-- 3. Bad Types -->
         <section><h2>2. Bad Types</h2></section>
 
         <section>
@@ -92,7 +149,7 @@
             </code></pre>
 
             <aside class="notes">
-              Talk about what each of these 4 functions do
+              Talk about what each of these 4 functions do.
             </aside>
           </section>
         </section>
@@ -101,14 +158,7 @@
         <section>
           <h3>Float => Decimal</h3>
 
-          <section></section>
-
           <section>
-            <pre><code data-trim>
-              iex(1)> 0.1 + 0.2
-              0.30000000000000004
-            </code></pre>
-
             <aside class="notes">
               Some types of data (money) should always be stored and operated on
               as an integer or a decimal, to avoid float rounding issues.
@@ -117,7 +167,18 @@
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.CustomTypes.FakeDecimal do
+              iex(1)> 0.1 + 0.2
+              0.30000000000000004
+            </code></pre>
+
+            <aside class="notes">
+              Talk about float rounding issues.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              defmodule Hal.CustomTypes.FakeDecimal do
                 @behavior Ecto.Type
 
                 def type, do: :float
@@ -176,12 +237,13 @@
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.Product do
+              defmodule Hal.Catalog.Product do
                 use Ecto.Schema
+                alias Hal.CustomTypes.FakeDecimal
 
                 schema "products" do
                   field :name, :string
-                  field :price, MyApp.CustomTypes.FakeDecimal
+                  field :price, FakeDecimal
                 end
               end
             </code></pre>
@@ -193,28 +255,28 @@
           </section>
         </section>
 
-        <!-- 3.2: Unix Timestamps -->
         <section>
           <h3>Unix Timestamps</h3>
 
-          <section></section>
+          <section>
+            <aside class="notes">
+              We store dates and times as Unix timestamps. They're great as a
+              storage format, but can be a pain to work with.
+            </aside>
+          </section>
 
           <section>
+            <!-- TODO: live timestamp examples. Nice to have, do last. -->
             <pre><code data-trim>
               old_and_busted = 1519503600
 
               new_hotness = "2018-02-24T14:20:00-06:00"
             </code></pre>
-
-            <aside class="notes">
-              Consider Unix timestamps. They're great as a storage format, but
-              can be a pain to work with.
-            </aside>
           </section>
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.CustomTypes.UnixTimestamp do
+              defmodule Hal.CustomTypes.UnixTimestamp do
                 @behaviour Ecto.Type
 
                 def type, do: :integer
@@ -264,34 +326,95 @@
           </section>
         </section>
 
-        <!-- 3.3: Comma Separated Lists -->
-        <!-- TODO? -->
-
-        <!-- 3.4: JSON Strings -->
-        <!-- TODO? -->
-
-        <!-- 4: Bad Structure -->
         <section><h2>3. Bad Structure</h2></section>
 
-        <!-- 4.1: Data that shoudn't exist -->
-        <!-- TODO -->
-
-        <!-- 4.1.1: It's okay to omit caches -->
         <section>
           <h3>Eliminating unnecessary columns</h3>
 
           <section>
-            <p>TODO: graphic here</p>
+            <!-- TODO: make sure this is safe to show -->
+            <pre><code data-trim>
+            CREATE TABLE `users` (
+              `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+              `repeat_customer` tinyint(1) NOT NULL DEFAULT '0',
+              `email` varchar(254) NOT NULL,
+              `username` varchar(32) NOT NULL DEFAULT '',
+              `password` varchar(64) NOT NULL,
+              `logins` int(10) unsigned NOT NULL DEFAULT '0',
+              `last_login` int(10) unsigned DEFAULT NULL,
+              `last_ip_address` varchar(100) DEFAULT NULL,
+              `ip_address_log` text,
+              `recover_password` varchar(128) DEFAULT NULL,
+              `reset_key` varchar(255) DEFAULT NULL,
+              `reset_expiration` bigint(20) unsigned DEFAULT NULL,
+              `supplier_id` smallint(6) DEFAULT NULL,
+              `first_name` varchar(50) DEFAULT NULL,
+              `last_name` varchar(50) DEFAULT NULL,
+              `company_name` varchar(255) DEFAULT NULL,
+              `newsletter` tinyint(1) NOT NULL DEFAULT '0',
+              `phone_number` varchar(32) DEFAULT NULL,
+              `avatar_filename` varchar(64) DEFAULT NULL,
+              `failed_cc_attempts` smallint(6) NOT NULL DEFAULT '0',
+              `lifted_cc_expiration` bigint(20) unsigned DEFAULT NULL,
+              `auth_customer_profile_id` varchar(50) DEFAULT NULL,
+              `payment_purchaseorder` tinyint(1) NOT NULL DEFAULT '0',
+              `payment_checkmoneyorder` tinyint(1) NOT NULL DEFAULT '0',
+              `payment_wiretransfer` tinyint(1) NOT NULL DEFAULT '0',
+              `tax_exempt` tinyint(1) NOT NULL DEFAULT '0',
+              `beans_id` bigint(20) unsigned DEFAULT NULL,
+              `beansbooks_id` bigint(20) unsigned DEFAULT NULL,
+              `balanced_href` varchar(255) DEFAULT NULL,
+              `stripe_id` varchar(255) DEFAULT NULL,
+              `checkoutquestion_id` bigint(20) unsigned DEFAULT NULL,
+              `sales_rep_id` int(10) unsigned DEFAULT NULL,
+              `sales_rep_timestamp` bigint(20) unsigned DEFAULT NULL,
+              `tech_rep_id` int(10) unsigned DEFAULT NULL,
+              `type` enum('business','individual') DEFAULT NULL,
+              `reseller` tinyint(1) NOT NULL DEFAULT '0',
+              PRIMARY KEY (`id`),
+              UNIQUE KEY `uniq_username` (`username`),
+              UNIQUE KEY `uniq_email` (`email`),
+              KEY `IDX_1483A5E92ADD6D8C` (`supplier_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+            </code></pre>
+
+            <aside class="notes">
+              This is our actual users table. Dead fraud prevention
+              analytics, avatars we don't use anymore, three payment
+              processors, two accounting systems. We don't need most of this.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+            schema "users" do
+              field :type, :string # "business" or "individual"
+              field :email, :string
+              field :password, :string
+              field :first_name, :string
+              field :last_name, :string
+              field :company_name, :string
+              field :phone_number, :string
+
+              belongs_to :sales_rep, Employee
+              field :sales_rep_timestamp, UnixTimestamp
+            end
+            </code></pre>
+
+            <aside class="notes">
+              The schema only imports what it uses. As other fields become
+              necessary, they'll be added. UPDATEs are probably safe, but be
+              careful with INSERTs.
+            </aside>
           </section>
         </section>
 
-        <!-- 4.1.2: Join table to custom type - `order_statuses` -->
         <section>
           <h3>Eliminating unnecessary tables</h3>
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.CustomTypes.OrderStatus do
+              defmodule Hal.CustomTypes.OrderStatus do
                 @behaviour Ecto.Type
 
                 def type, do: :integer
@@ -376,16 +499,12 @@
           </section>
         </section>
 
-        <!-- 4.2: Tables that don't exist but should -->
-        <!-- TODO -->
-
-        <!-- 4.2.1: Structs not schemas -->
         <section>
           <h3>Problem: Structural Duplication</h3>
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.Orders.Item do
+              defmodule Hal.Orders.Item do
                 use Ecto.Schema
 
                 schema "order_items" do
@@ -401,7 +520,7 @@
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.Support.Repair do
+              defmodule Hal.Support.Repair do
                 use Ecto.Schema
 
                 schema "support_repairs" do
@@ -414,6 +533,8 @@
               end
             </code></pre>
           </section>
+
+          <!-- TODO: add a slide showing how to use this -->
         </section>
 
         <section>
@@ -421,7 +542,7 @@
 
           <section>
             <pre><code data-trim>
-              defmodule MyApp.Shipping.Parcel do
+              defmodule Hal.Shipping.Parcel do
                 defstruct :depth, :width, :height, :weight, :__original__
               end
             </code></pre>
@@ -454,12 +575,12 @@
               end
             </code></pre>
           </section>
+
+          <!-- TODO: add a slide showing how to use this -->
         </section>
 
-        <!-- 4.3: TODO: read up on `virtual: true` -->
-
-        <!-- 5: Conclusion (Putting it all together?) -->
         <!-- TODO -->
+        <!-- End slide with where to go next (github.com/system76, @system76 etc.) -->
         <section><h2>FIXME: conclusion</h2></section>
 
       </div>
