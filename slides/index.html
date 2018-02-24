@@ -121,14 +121,18 @@
               use Ecto.Schema
 
               schema "order_products" do
-                field :amount,      :decimal
-                field :price,       :decimal
+                field :amount, :decimal
+                field :price, :decimal
                 field :cost_amount, :decimal
-                field :cost,        :decimal
+                field :cost, :decimal
                 # snip
               end
             end
             </code></pre>
+
+            <aside class="notes">
+              "Can anyone tell me what these do? How about now?"
+            </aside>
           </section>
 
           <section>
@@ -137,20 +141,23 @@
               use Ecto.Schema
 
               schema "order_products" do
-                field :base_price,             :decimal, source: :amount
-                field :price_as_configured,    :decimal, source: :price
-                field :our_base_cost,          :decimal, source: :cost_amount
-                field :our_cost_as_configured, :decimal, source: :cost
+                field :base_price, :decimal,
+                  source: :amount
+                field :price_as_configured, :decimal,
+                  source: :price
+                field :our_base_cost, :decimal,
+                  source: :cost_amount
+                field :our_cost_as_configured, :decimal,
+                  source: :cost
                 # snip
               end
             end
             </code></pre>
-          </section>
 
-          <aside class="notes">
-            Talk about good names. "Can anyone tell me what these do? How
-            about now?" `:source` was added in Ecto 2.2 (Aug 2017).
-          </aside>
+            <aside class="notes">
+              Talk about good names. `:source` was added in Ecto 2.2 (Aug 2017).
+            </aside>
+          </section>
         </section>
 
         <section><h2>2. Bad Types</h2></section>
@@ -192,6 +199,19 @@
 
             <aside class="notes">
               Talk about float rounding issues.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              iex(1)> alias Decimal, as: D
+              Decimal
+              iex(2)> D.add(D.new(0.1), D.new(0.2))
+              #Decimal<0.3>
+            </code></pre>
+
+            <aside class="notes">
+              Talk about the Decimal library.
             </aside>
           </section>
 
@@ -350,6 +370,52 @@
           </section>
         </section>
 
+        <section>
+          <section>
+            <p>Hal.CustomTypes.CommaSeparatedList</p>
+            <pre><code data-trim>
+              # DB
+              ",123,456,789,"
+              # Schema
+              "[123, 456, 789]"
+            </code></pre>
+
+            <p>Hal.CustomTypes.AccountType</p>
+            <pre><code data-trim>
+              # DB
+              "business" || "individual"
+              # Schema
+              :business || :individual
+            </code></pre>
+
+            <aside class="notes">
+              "We use this everywhere." David flavored lists. MySQL enums.
+            </aside>
+          </section>
+
+          <section>
+            <p>Hal.CustomTypes.JSON</p>
+            <pre><code data-trim>
+              # DB
+              "{\"foo\":123,\"bar\":true}"
+              # Schema
+              %{"foo" => 123, "bar" => true}
+            </code></pre>
+
+            <p>Hal.CustomTypes.EncryptedString</p>
+            <pre><code data-trim>
+              # DB
+              "PgnArHSJ0Ab6x3UvsXv8V3khHrW+2O45JN4jF0FOuOmb8X5kyWOcyO02F9SZ"
+              # Schema
+              "Hello, World!"
+            </code></pre>
+
+            <aside class="notes">
+              JSON strings. Encrypted data at rest.
+            </aside>
+          </section>
+        </section>
+
         <section><h2>3. Bad Structure</h2></section>
 
         <section>
@@ -500,9 +566,9 @@
 
           <section>
             <pre><code data-trim>
-            def dump(code), do: Map.fetch(@ids_by_code, code)
+              def dump(code), do: Map.fetch(@ids_by_code, code)
 
-            def load(id), do: Map.fetch(@codes_by_id, id)
+              def load(id), do: Map.fetch(@codes_by_id, id)
             </code></pre>
 
             <aside class="notes">
@@ -513,11 +579,31 @@
 
           <section>
             <pre><code data-trim>
-            def name(code) do Map.get(@names_by_code, code)
+              def name(code) do Map.get(@names_by_code, code)
             </code></pre>
 
             <aside class="notes">
               Finally we provide a getter to lookup the human readable name.
+            </aside>
+          </section>
+
+          <section>
+            <pre><code data-trim>
+              defmodule Hal.Orders.Order do
+                use Ecto.Schema
+                alias Hal.CustomTypes.OrderStatus
+
+                schema "orders" do
+                  field :status, OrderStatus,
+                    source: :order_status_id
+                  # snip
+                end
+              end
+            </code></pre>
+
+            <aside class="notes">
+              Then we just replace the association with a field and never think
+              about it again.
             </aside>
           </section>
         </section>
@@ -617,10 +703,22 @@
         </section>
 
         <section>
-          <h2>Any Questions?</h2>
+          <h2><ol>
+            <li>Bad Names</li>
+            <li>Bad Types</li>
+            <li>Bad Structure</li>
+          </ol></h2>
 
-          <p><a href="https://system76.com">https://system76.com</a></p>
-          <p><a href="https://github.com/system76">https://github.com/system76</a></p>
+          <aside class="notes">
+            Tell them what you're gonna tell them.
+          </aside>
+        </section>
+
+        <section>
+          <h2>Questions?</h2>
+
+          <p><a href="https://system76.com">system76.com</a></p>
+          <p><a href="https://github.com/system76">github.com/system76</a></p>
         </section>
 
       </div>
